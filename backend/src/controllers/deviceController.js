@@ -102,9 +102,8 @@ const deviceController = {
             const topic = `farm/node/${uuid}/output/${actuator_prefix}`;
 
             // Send MQTT command
-            const success = mqttService.sendCommand(uuid, actuator_prefix, val);
-
-            if (success) {
+            try {
+                await mqttService.sendCommand(uuid, actuator_prefix, val);
                 res.json({
                     message: 'ส่งคำสั่งสำเร็จ',
                     topic,
@@ -112,7 +111,8 @@ const deviceController = {
                     actuator_prefix,
                     val
                 });
-            } else {
+            } catch (mqttError) {
+                console.error('MQTT send error:', mqttError);
                 res.status(500).json({ message: 'ไม่สามารถส่งคำสั่งได้' });
             }
         } catch (error) {

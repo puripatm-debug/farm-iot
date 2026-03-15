@@ -86,18 +86,53 @@ class MQTTService {
     }
 
     publish(topic, message) {
-        if (!this.isConnected) {
-            console.error('❌ MQTT not connected');
-            return false;
-        }
+        return new Promise((resolve, reject) => {
+            // If already connected, use existing connection
+            if (this.isConnected && this.client) {
+                this.client.publish(topic, message, (err) => {
+                    if (err) {
+                        console.error('❌ Publish error:', err);
+                        reject(err);
+                    } else {
+                        console.log(`📤 Published: ${topic} - ${message}`);
+                        resolve(true);
+                    }
+                });
+            } else {
+                // Serverless: connect, publish, disconnect
+                const tempClient = mqtt.connect({
+                    host: process.env.MQTT_HOST,
+                    port: process.env.MQTT_PORT || 1883,
+                    username: process.env.MQTT_USER,
+                    password: process.env.MQTT_PASS,
+                    clientId: 'iot-farm-pub-' + Math.random().toString(16).substr(2, 8)
+                });
 
-        return this.client.publish(topic, message, (err) => {
-            if (err) {
-                console.error('❌ Publish error:', err);
-                return false;
+                tempClient.on('connect', () => {
+                    tempClient.publish(topic, message, (err) => {
+                        tempClient.end();
+                        if (err) {
+                            console.error('❌ Publish error:', err);
+                            reject(err);
+                        } else {
+                            console.log(`📤 Published (temp): ${topic} - ${message}`);
+                            resolve(true);
+                        }
+                    });
+                });
+
+                tempClient.on('error', (err) => {
+                    console.error('❌ Temp MQTT error:', err);
+                    tempClient.end();
+                    reject(err);
+                });
+
+                // Timeout after 10 seconds
+                setTimeout(() => {
+                    tempClient.end();
+                    reject(new Error('MQTT connection timeout'));
+                }, 10000);
             }
-            console.log(`📤 Published: ${topic} - ${message}`);
-            return true;
         });
     }
 
