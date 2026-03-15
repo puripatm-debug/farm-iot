@@ -35,19 +35,54 @@ export default function MonitorPage() {
     loadDevices();
     connectMQTT();
 
+    // API Polling fallback - fetch sensor data every 5 seconds
+    const pollInterval = setInterval(() => {
+      pollSensorData();
+    }, 5000);
+
     return () => {
       mqttClient.disconnect();
+      clearInterval(pollInterval);
     };
   }, []);
+
+  const devicesRef = { current: [] as Device[] };
 
   const loadDevices = async () => {
     try {
       const response = await deviceAPI.getDevices();
       setDevices(response.data);
+      devicesRef.current = response.data;
     } catch (error) {
       console.error('Error loading devices:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const pollSensorData = async () => {
+    try {
+      for (const device of devicesRef.current) {
+        const response = await deviceAPI.getSensorData(String(device.id));
+        const sensorData = response.data;
+        if (sensorData.length > 0) {
+          setRealtimeData(prev => {
+            const newMap = new Map(prev);
+            const formatted = sensorData
+              .reverse()
+              .map((d: any) => ({
+                uuid: device.uuid,
+                sensor_prefix: d.sensor_prefix,
+                value: parseFloat(d.val),
+                timestamp: new Date(d.created_at),
+              }));
+            newMap.set(device.uuid, formatted.slice(-50));
+            return newMap;
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Polling error:', error);
     }
   };
 
