@@ -20,6 +20,7 @@ interface Device {
   description?: string;
   status: number;
   device_type?: string;
+  farm_status?: number;
   created_at: string;
 }
 
@@ -179,6 +180,7 @@ export default function MonitorPage() {
             <div key={device.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               {/* Device Header */}
               <div className={`px-5 py-3 ${
+                device.farm_status === 0 ? 'bg-gradient-to-r from-red-500 to-red-600' :
                 device.status === 1 ? 'bg-gradient-to-r from-green-500 to-emerald-600' : 'bg-gray-400'
               } text-white flex items-center justify-between`}>
                 <div>
@@ -186,13 +188,21 @@ export default function MonitorPage() {
                   <p className="text-xs opacity-80">{device.farm_name} | Topic: farm/node/{device.uuid}/input/*</p>
                 </div>
                 <span className={`text-xs px-2 py-1 rounded-full ${
+                  device.farm_status === 0 ? 'bg-white/20' :
                   device.status === 1 ? 'bg-white/20' : 'bg-white/10'
                 }`}>
-                  {device.status === 1 ? 'ออนไลน์' : 'ออฟไลน์'}
+                  {device.farm_status === 0 ? 'ระงับ' : device.status === 1 ? 'ออนไลน์' : 'ออฟไลน์'}
                 </span>
               </div>
 
-              <div className="p-5">
+              <div className="p-5 relative">
+                {device.farm_status === 0 && (
+                  <div className="absolute inset-0 bg-white/80 z-10 flex flex-col items-center justify-center">
+                    <div className="text-4xl mb-2">🚫</div>
+                    <p className="text-lg font-bold text-red-500">ฟาร์มถูกระงับการใช้งาน</p>
+                    <p className="text-sm text-gray-400 mt-1">หยุดแสดงข้อมูลเซ็นเซอร์ชั่วคราว</p>
+                  </div>
+                )}
                 {sensorTypes.length > 0 ? (
                   <div className="space-y-5">
                     {sensorTypes.map((sensorType, idx) => {
