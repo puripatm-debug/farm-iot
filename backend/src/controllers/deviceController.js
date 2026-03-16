@@ -196,9 +196,11 @@ const deviceController = {
                 return res.status(404).json({ message: 'ไม่พบอุปกรณ์' });
             }
 
+            // Soft delete: append timestamp to uuid so the UNIQUE constraint allows re-adding the same uuid
+            const now = new Date().toISOString().replace(/[^0-9]/g, '');
             await db.query(
-                'UPDATE iot_devices SET deleted_at = NOW() WHERE id = ?',
-                [id]
+                `UPDATE iot_devices SET deleted_at = NOW(), uuid = CONCAT(uuid, '_del_', ?) WHERE id = ?`,
+                [now, id]
             );
 
             res.json({ message: 'ลบอุปกรณ์สำเร็จ' });
